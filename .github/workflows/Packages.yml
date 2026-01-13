@@ -31,12 +31,18 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to GitHub Packages
+            - name: Login to GitHub Packages
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Normalize image name (lowercase)
+        run: |
+          echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+          echo "IMAGE_LC=$(echo '${{ inputs.image_name }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "TAG_LC=$(echo '${{ inputs.image_tag }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Build and push image
         uses: docker/build-push-action@v5
@@ -44,13 +50,14 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/${{ inputs.image_name }}:${{ inputs.image_tag }}
+          tags: ghcr.io/${{ env.OWNER_LC }}/${{ env.IMAGE_LC }}:${{ env.TAG_LC }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Output image info
         run: |
-          echo "Image: ghcr.io/${{ github.repository_owner }}/${{ inputs.image_name }}:${{ inputs.image_tag }}"
+          echo "Image: ghcr.io/${{ env.OWNER_LC }}/${{ env.IMAGE_LC }}:${{ env.TAG_LC }}"
+
 
   # 清理旧的工作流记录
   cleanup:
